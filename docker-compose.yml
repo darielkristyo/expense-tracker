@@ -1,0 +1,54 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: expense-app
+    env_file:
+      - .env
+    ports:
+      - "8000:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - expense-network
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.4
+    container_name: expense-db
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - expense-network
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:4
+    profiles:
+      - tools
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - expense-network
+
+volumes:
+  mysql-data:
+
+networks:
+  expense-network:
+    driver: bridge
